@@ -335,6 +335,25 @@ export class PluginManager {
   }
 
   /**
+   * Reload objects.xml (and optional tiles.xml) and notify bundled plugins.
+   */
+  reloadGameData(objectsPath: string, tilesPath?: string): void {
+    if (!this.gameData) return;
+    try {
+      this.gameData.load(objectsPath);
+      if (tilesPath) this.gameData.loadTiles(tilesPath);
+    } catch (err) {
+      Logger.error('PluginManager', `reloadGameData failed: ${(err as Error).message}`);
+      return;
+    }
+    for (const plugin of this.loadedPlugins.values()) {
+      if (plugin.context instanceof PluginContext) {
+        plugin.context.notifyGameDataReload();
+      }
+    }
+  }
+
+  /**
    * Load plugins from both the bundled directory (first-party `.ts`/`.js`) and the
    * user directory (`Documents/Realmengine/Plugins/*.mjs`).
    *

@@ -918,7 +918,7 @@ export function register(ctx: PluginContext) {
         if (distSq <= radiusSq) {
           const dmg = getDmgFromState(client, state, aoe.damage, aoe.armorPierce);
           aoes.splice(i, 1);
-          applyDamage(client, state, dmg, `AoE dmg=${dmg} (on MOVE, pre-AOEACK)`, packet,
+          applyDamage(client, state, dmg, `AoE dmg=${dmg} (on AOEACK)`, packet,
             PREDICTED_TTL_ENVIRONMENT_MS);
           if (state.nexusSent) return;
         }
@@ -1268,7 +1268,7 @@ export function register(ctx: PluginContext) {
 
   const threatTimer = setInterval(() => {
     try { evaluateThreats(); } catch (err) { ctx.log(`threat eval failed: ${(err as Error).message}`); }
-  }, 20);
+  }, 50);
   ctx.registerCleanup(() => clearInterval(threatTimer));
 
   ctx.hookCommand('an', (client, _cmd, args) => {

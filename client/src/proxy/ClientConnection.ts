@@ -6,6 +6,7 @@ import { PacketWriter } from '../packets/PacketWriter.js';
 import { State } from '../state/State.js';
 import { PlayerData } from '../state/PlayerData.js';
 import { Logger } from '../util/Logger.js';
+import { OutboundPacketGuard } from './OutboundPacketGuard.js';
 import type { Proxy } from './Proxy.js';
 
 const CLIENT_KEY = '5a4d2016bc16dc64883194ffd9';
@@ -60,6 +61,8 @@ export class ClientConnection {
   private _helloIsRetrying = false;
   private static readonly HELLO_RETRY_MS  = 3000;
   private static readonly HELLO_MAX_RETRIES = 3;
+
+  private readonly outboundGuard = new OutboundPacketGuard();
 
   constructor(
     private proxy: Proxy,
@@ -197,6 +200,7 @@ export class ClientConnection {
 
   /** Send a packet to the game server. */
   sendToServer(packet: Packet): void {
+    if (!this.outboundGuard.allow(packet)) return;
     this.send(packet, false);
   }
 

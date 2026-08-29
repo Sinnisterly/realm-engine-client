@@ -78,6 +78,7 @@ export class PluginContext {
   private _enabledChangeCallbacks: ((enabled: boolean) => void)[] = [];
   private _data = new Map<string, any>();
   private _cleanupFns: (() => void)[] = [];
+  private _gameDataReloadFns: (() => void)[] = [];
 
   /** Callback set by PluginManager to route logs to the dashboard (not console). */
   public onDashboardLog: ((pluginName: string, message: string) => void) | null = null;
@@ -365,5 +366,18 @@ export class PluginContext {
   runCleanup(): void {
     for (const fn of this._cleanupFns) { try { fn(); } catch {} }
     this._cleanupFns = [];
+    this._gameDataReloadFns = [];
+  }
+
+  /** Register a callback when objects.xml / tiles.xml are reloaded at runtime. */
+  onGameDataReload(fn: () => void): void {
+    this._gameDataReloadFns.push(fn);
+  }
+
+  /** Called by PluginManager after game data files are reloaded. */
+  notifyGameDataReload(): void {
+    for (const fn of this._gameDataReloadFns) {
+      try { fn(); } catch {}
+    }
   }
 }

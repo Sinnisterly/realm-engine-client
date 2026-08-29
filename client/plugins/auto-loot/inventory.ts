@@ -11,8 +11,10 @@ import type { PluginContext } from '../../src/plugins/PluginContext.js';
 import type { ClientConnection } from '../../src/proxy/ClientConnection.js';
 import type { TrackedEntity } from '../../src/state/GameWorldState.js';
 import type { LootCatalog } from './catalog.js';
+import { getBagItemId } from './bags.js';
 import { isReservedDestination, type AutoLootState } from './state.js';
 import { isHpOrMpPotion } from './items.js';
+import { readQuickSlot } from '../../src/util/quickSlots.js';
 import {
   QUICKSLOT_PACKET_BASE,
   QUICK_SLOT_COUNT,
@@ -30,24 +32,7 @@ export function isQuickslotPacketSlot(packetSlotId: number): boolean {
     && packetSlotId < (QUICKSLOT_PACKET_BASE + QUICK_SLOT_COUNT);
 }
 
-export function readQuickSlot(client: ClientConnection, slot: number): { itemType: number; quantity: number } {
-  const raw = (client.playerData as any).quickSlots?.[slot];
-
-  if (typeof raw === 'number') {
-    return { itemType: raw > 0 ? raw : -1, quantity: 0 };
-  }
-
-  if (raw && typeof raw === 'object') {
-    const itemTypeRaw = Number(raw.itemType ?? -1);
-    const quantityRaw = Number(raw.quantity ?? 0);
-    return {
-      itemType: itemTypeRaw > 0 ? itemTypeRaw : -1,
-      quantity: Number.isFinite(quantityRaw) ? Math.max(0, Math.trunc(quantityRaw)) : 0,
-    };
-  }
-
-  return { itemType: -1, quantity: 0 };
-}
+export { readQuickSlot } from '../../src/util/quickSlots.js';
 
 /** Current object type occupying a packet slot id (-1 if empty / out of range). */
 export function getPlayerSlotObjectType(client: ClientConnection, packetSlotId: number): number {
@@ -98,9 +83,10 @@ export function getQuickslotDestination(
   }
 
   if (existingSlot >= 0) {
-    // Stack only when the per-slot count is known and below cap; otherwise don't
-    // risk creating a duplicate HP/MP stack in another quickslot.
-    return (existingQuantity > 0 && existingQuantity < MAX_POTION_QUICKSLOT_STACK)
+    // quantity 0 means the wire did not send a stack count; still try to stack.
+    const canStack = existingQuantity <= 0
+      || (existingQuantity > 0 && existingQuantity < MAX_POTION_QUICKSLOT_STACK);
+    return canStack
       ? { packetSlotId: QUICKSLOT_PACKET_BASE + existingSlot, currentObjectType: itemId }
       : null;
   }
@@ -205,8 +191,10 @@ export function sendLootSwap(
   // as it was up to a tick ago. Sending slotObject2 with an objectType that does
   // not match the slot's real contents is an invalid inventory operation, and the
   // server drops the connection over those rather than just ignoring them.
-  const actual = getPlayerSlotObjectType(client, destination.packetSlotId);
-  if (actual !== destination.currentObjectType) return false;
+  const actualDest = getPlayerSlotObjectType(client, destination.packetSlotId);
+  if (actualDest !== destination.currentObjectType) return false;
+
+  if (getBagItemId(bag, bagSlot) !== itemId) return false;
 
   const packet = ctx.createPacket('INVENTORYSWAP');
   packet.data.time = Math.trunc(client.time);

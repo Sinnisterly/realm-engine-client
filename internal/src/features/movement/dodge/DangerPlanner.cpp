@@ -151,6 +151,8 @@ float s_lastDeltaTime = 0.016f;
 // of how often the hook fires.
 static LARGE_INTEGER s_wallFreq = []{ LARGE_INTEGER f{}; QueryPerformanceFrequency(&f); return f; }();
 static LARGE_INTEGER s_lastMoveWallTick{};
+static LARGE_INTEGER s_lastNativeMoveWall{};
+static std::atomic<float> s_nativeMoveMinIntervalMs{ 100.f };
 
 float GetDeltaTime()
 {
@@ -1075,6 +1077,20 @@ const char* GetLastFallbackReason() { return s_lastFallback; }
 
 bool NativeMoveTo(void* player, float worldX, float worldY)
 {
+    if (!player) return false;
+
+    // Cap MOVE emit rate. Reflex dodge can call this every render frame (~60 Hz)
+    // but the server expects roughly one authoritative step per tick (~200 ms).
+    LARGE_INTEGER now{};
+    QueryPerformanceCounter(&now);
+    if (s_lastNativeMoveWall.QuadPart != 0 && s_wallFreq.QuadPart != 0) {
+        const double elapsedMs = double(now.QuadPart - s_lastNativeMoveWall.QuadPart)
+                               / double(s_wallFreq.QuadPart) * 1000.0;
+        if (elapsedMs < double(s_nativeMoveMinIntervalMs.load(std::memory_order_relaxed)))
+            return false;
+    }
+    s_lastNativeMoveWall = now;
+
     // Ensure the function pointer is resolved (no-op after first call).
     ResolveMoveTo();
     return CallMoveTo(player, worldX, worldY);

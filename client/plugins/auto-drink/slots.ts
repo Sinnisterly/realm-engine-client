@@ -2,6 +2,7 @@
 
 import type { ClientConnection } from '../../src/proxy/ClientConnection.js';
 import { BELT_SLOT_BASE } from './constants.js';
+import { quickSlotCount, readQuickSlot } from '../../src/util/quickSlots.js';
 
 /** A potion found in a slot, with the USEITEM packet slot id to use. */
 export interface FoundSlot {
@@ -13,11 +14,11 @@ export interface FoundSlot {
 /** Every belt quickslot holding a matching potion, one entry per unit in the stack. */
 function beltSlots(client: ClientConnection, idSet: Set<number>, limit: number): FoundSlot[] {
   const out: FoundSlot[] = [];
-  const belt = (client.playerData as any).quickSlots ?? [];
-  const cap = (client.playerData as any).hasThirdQuickSlot ? 3 : 2;
+  const cap = quickSlotCount(client);
+  const belt = client.playerData.quickSlots ?? [];
   for (let i = 0; i < cap && i < belt.length && out.length < limit; i++) {
-    const s: any = belt[i];
-    if (s?.itemType === -1 || !(s?.quantity > 0) || !idSet.has(s.itemType)) continue;
+    const s = readQuickSlot(client, i);
+    if (s.itemType === -1 || !(s.quantity > 0) || !idSet.has(s.itemType)) continue;
     // A belt quickslot is a stack, so the same slot id is drinkable `quantity` times.
     for (let n = 0; n < s.quantity && out.length < limit; n++) {
       out.push({ slotId: BELT_SLOT_BASE + i, itemType: s.itemType });

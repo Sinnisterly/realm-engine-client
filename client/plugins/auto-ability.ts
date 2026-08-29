@@ -143,7 +143,7 @@ export function register(ctx: PluginContext) {
     // true max, as auto-drink does. Using the bare base makes the ratio exceed
     // 100% on any MP gear, so the floor never held and this fired every interval
     // at 0 MP, which the server closes the connection over.
-    const trueMaxMana = pd.maxMana + pd.manaBonus;
+    const trueMaxMana = pd.effectiveMaxMana;
     if (trueMaxMana <= 0 || (pd.mana / trueMaxMana) * 100 < mpFloorPct) return;
 
     const now = Date.now();

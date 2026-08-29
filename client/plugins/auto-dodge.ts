@@ -56,15 +56,15 @@ export function register(ctx: PluginContext) {
   ctx.registerSetting('dodgeMode', {
     label: 'Dodge mode',
     type: 'select',
-    value: 'xdodge',
+    value: 'pj-dodge',
     options: [
       { label: 'Off', value: 'off' },
-      { label: 'RE-Plus', value: 'xdodge' },
-      { label: 'RE-Sim (Grid)', value: 'rollout-grid' },
-      { label: 'RE-Sim (Quadtree)', value: 'rollout-quad' },
-      { label: 'zDodge', value: 'zdodge' },
-      { label: 'RE++', value: 're-plus-plus' },
-      { label: 'PJDodge', value: 'pj-dodge' },
+      { label: 'RE-Plus (legacy)', value: 'xdodge' },
+      { label: 'RE-Sim Grid (legacy)', value: 'rollout-grid' },
+      { label: 'RE-Sim Quad (legacy)', value: 'rollout-quad' },
+      { label: 'zDodge (legacy)', value: 'zdodge' },
+      { label: 'RE++ (legacy)', value: 're-plus-plus' },
+      { label: 'PJDodge (recommended)', value: 'pj-dodge' },
     ],
   }, () => flush());
 

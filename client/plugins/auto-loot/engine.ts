@@ -203,8 +203,11 @@ export class LootEngine {
     const attemptKey = `drink:${bag.objectId}:${bagSlot}:${itemId}`;
     if (capped || this.onCooldown(state, attemptKey, now)) return false;
 
+    if (getBagItemId(bag, bagSlot) !== itemId) return false;
+
     this.diag(`SEND autodrink USEITEM bag#${bag.objectId} slot=${bagSlot} item=${this.itemLabel(itemId)}`);
     sendUseItemFromBag(this.ctx, client, bag, bagSlot, itemId);
+    state.consumedBagSlots.set(makeBagSlotKey(bag, bagSlot, itemId), now + BAG_SLOT_CONSUME_MS);
     state.lastPickupAt = now;
     state.recentActions.push(now);
     state.recentAttempts.set(attemptKey, now);
@@ -265,7 +268,7 @@ export class LootEngine {
   private inventorySnapshot(client: ClientConnection): string {
     const inv = client.playerData.inventory ?? [];
     const bp = client.playerData.backpack ?? [];
-    const qs = (client.playerData as any).quickSlots ?? [];
+    const qs = client.playerData.quickSlots ?? [];
     const freeInv = [4, 5, 6, 7, 8, 9, 10, 11].filter((s) => Number(inv[s] ?? -1) === -1).length;
     const maxBpSize = client.playerData.hasBackpackExtender ? 16 : 8;
     const bpSize = client.playerData.hasBackpack ? maxBpSize : 0;
@@ -274,9 +277,9 @@ export class LootEngine {
       : 0;
     const qsCount = client.playerData.hasThirdQuickSlot ? 3 : 2;
     const qsParts = Array.from({ length: qsCount }, (_, i) => {
-      const s: any = qs[i];
+      const s = qs[i];
       if (s && typeof s === 'object') return `qs${i}=${s.itemType}x${s.quantity}`;
-      return `qs${i}=${typeof s === 'number' ? s : -1}`;
+      return `qs${i}=-1`;
     });
     return `inv_free=${freeInv} bp_free=${bpSize > 0 ? freeBp : 'n/a'}(size=${bpSize}) ${qsParts.join(' ')}`;
   }

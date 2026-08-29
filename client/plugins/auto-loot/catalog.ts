@@ -69,6 +69,12 @@ export class LootCatalog {
     return this.items.get(itemId);
   }
 
+  /** Rebuild from game data after objects.xml is refreshed. */
+  reload(): void {
+    this.items.clear();
+    this.load();
+  }
+
   private load(): void {
     const objects = this.ctx.gameData?.getAllObjects() ?? [];
 

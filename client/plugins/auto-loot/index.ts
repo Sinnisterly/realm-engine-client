@@ -35,6 +35,12 @@ export function register(ctx: PluginContext) {
   const guard = new ManualPotionGuard(ctx, settings, store);
   const engine = new LootEngine(ctx, settings, catalog, store, rules, bags);
 
+  ctx.onGameDataReload(() => {
+    catalog.reload();
+    settings.reloadLists();
+    ctx.log(`Auto Loot catalog reloaded (${catalog.size} items).`);
+  });
+
   registerBigBags(ctx, settings);
 
   // Manual potion guard: block/observe the player's own potion & quickslot packets.
