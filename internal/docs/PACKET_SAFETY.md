@@ -16,6 +16,7 @@ lists known send paths, limits, and the dodge unification plan.
 |--------|-------------|
 | USEITEM | 12 |
 | INVENTORYSWAP | 6 |
+| PLAYERHIT | 3 |
 | ESCAPE | 4 |
 | All synthetic combined | 24 |
 
@@ -30,6 +31,8 @@ Plugins also keep their own budgets (auto-loot, auto-drink).
 | auto-loot NEWTICK | INVENTORYSWAP, USEITEM | High | Stale slot checks, reservations, 3/sec cap |
 | auto-nexus escape retry | ESCAPE | Medium | Retry cap + interval |
 | auto-nexus threat eval | ESCAPE | Low | 50ms poll (was 20ms) |
+| GhostHit (DLL) | PLAYERHIT | High | 3/sec + 2.5s dedup in DevServer |
+| auto-drink poll + NEWTICK | USEITEM | High | 1 pot/pass, poll skips 150ms after tick |
 
 ## Dodge (DLL): main burst source
 

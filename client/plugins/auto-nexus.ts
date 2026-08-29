@@ -879,6 +879,10 @@ export function register(ctx: PluginContext) {
         ctx.log(`Held PLAYERHIT dropped — client disconnected before release`);
         return;
       }
+      if (state.nexusSent) {
+        ctx.log(`Held PLAYERHIT dropped — nexus already sent`);
+        return;
+      }
       client.sendRawToServer(bytes);
       ctx.log(`Released held PLAYERHIT (${dmg} dmg) ${lethalHoldMs}ms after ESCAPE`);
     }, lethalHoldMs);

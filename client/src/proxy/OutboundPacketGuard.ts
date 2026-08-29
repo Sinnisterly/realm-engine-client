@@ -9,6 +9,7 @@ import { Logger } from '../util/Logger.js';
 
 /** Max synthetic packets per second by packet name. */
 const PER_TYPE_LIMITS: Record<string, number> = {
+  PLAYERHIT: 3,
   USEITEM: 12,
   INVENTORYSWAP: 6,
   ESCAPE: 4,

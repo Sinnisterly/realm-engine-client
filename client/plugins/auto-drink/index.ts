@@ -43,6 +43,7 @@ interface InFlightHeal {
 interface AutoDrinkState {
   lastHpDrinkAt: number;
   lastMpDrinkAt: number;
+  lastEvaluateAt: number;
   inFlightHp: InFlightHeal[];
   inFlightMp: InFlightHeal[];
   /** Timestamps of USEITEMs sent in the last second, for the send-rate ceiling. */
@@ -52,7 +53,11 @@ interface AutoDrinkState {
 /** How long a sent pot counts toward predicted HP before it is assumed lost. */
 const IN_FLIGHT_TTL_MS = 1000;
 /** Floor between drinks even in panic, so the poll cannot machine-gun USEITEMs. */
-const PANIC_MIN_GAP_MS = 80;
+const PANIC_MIN_GAP_MS = 150;
+/** Skip the 60ms poll when NEWTICK already evaluated within this window. */
+const POLL_SKIP_AFTER_NEWTICK_MS = 150;
+/** Max USEITEM sends per tryDrink call (was up to maxBurst, default 3). */
+const MAX_POTS_PER_DRINK_PASS = 1;
 /** Poll period. Fast enough to beat the ~200 ms server tick, cheap enough to run always. */
 const POLL_MS = 60;
 /** Refill target sits this far above the threshold so we do not hover on the line. */
@@ -112,7 +117,7 @@ export function register(ctx: PluginContext) {
   function getState(client: ClientConnection): AutoDrinkState {
     let s = states.get(client);
     if (!s) {
-      s = { lastHpDrinkAt: 0, lastMpDrinkAt: 0, inFlightHp: [], inFlightMp: [], recentSends: [] };
+      s = { lastHpDrinkAt: 0, lastMpDrinkAt: 0, lastEvaluateAt: 0, inFlightHp: [], inFlightMp: [], recentSends: [] };
       states.set(client, s);
     }
     return s;
@@ -170,7 +175,7 @@ export function register(ctx: PluginContext) {
     const deficit = (max * targetPct) / 100 - cur;
     if (deficit <= 0) return false;
 
-    const budget = Math.min(maxBurst, sendBudget(state));
+    const budget = Math.min(MAX_POTS_PER_DRINK_PASS, maxBurst, sendBudget(state));
     if (budget <= 0) return false;
 
     const slots = findSlots(client, idSet, budget, preferBelt);
@@ -179,6 +184,7 @@ export function register(ctx: PluginContext) {
     let healed = 0;
     let used = 0;
     for (const found of slots) {
+      if (used >= MAX_POTS_PER_DRINK_PASS) break;
       if (healed >= deficit) break;
       sendUseItem(ctx, client, found.slotId, found.itemType);
       state.recentSends.push(now);
@@ -199,13 +205,17 @@ export function register(ctx: PluginContext) {
     return true;
   }
 
-  function evaluate(client: ClientConnection | null): void {
+  function evaluate(client: ClientConnection | null, fromPoll = false): void {
     if (!ctx.enabled) return;
     if (!client?.connected || !client.objectId) return;
     if (inSafeZone(client)) return;
 
-    const pd = client.playerData;
     const state = getState(client);
+    const now = Date.now();
+    if (fromPoll && (now - state.lastEvaluateAt) < POLL_SKIP_AFTER_NEWTICK_MS) return;
+    state.lastEvaluateAt = now;
+
+    const pd = client.playerData;
 
     tryDrink(client, state, enableHp, pd.health, pd.effectiveMaxHealth,
       hpThresholdPct, hpPanicPct, hpPots, state.inFlightHp, 'lastHpDrinkAt', 'HP');
@@ -218,11 +228,11 @@ export function register(ctx: PluginContext) {
 
   ctx.hookPacket('NEWTICK', (client) => {
     activeClient = client;
-    evaluate(client);
+    evaluate(client, false);
   });
 
   const pollTimer = setInterval(() => {
-    try { evaluate(activeClient); } catch (err) { ctx.log(`poll failed: ${(err as Error).message}`); }
+    try { evaluate(activeClient, true); } catch (err) { ctx.log(`poll failed: ${(err as Error).message}`); }
   }, POLL_MS);
   ctx.registerCleanup(() => clearInterval(pollTimer));
 
@@ -234,6 +244,7 @@ export function register(ctx: PluginContext) {
     const s = getState(client);
     s.lastHpDrinkAt = 0;
     s.lastMpDrinkAt = 0;
+    s.lastEvaluateAt = 0;
     s.inFlightHp.length = 0;
     s.inFlightMp.length = 0;
     s.recentSends.length = 0;

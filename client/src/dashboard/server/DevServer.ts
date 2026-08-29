@@ -424,6 +424,11 @@ export class DevServer {
   private gameWikiCatalogJson: string | null = null;
   /** Spawned muling-headless process (one at a time). */
   private mulingProcess: ReturnType<typeof spawn> | null = null;
+  /** GhostHit dedup + rate cap for synthetic PLAYERHIT injection. */
+  private ghostHitSeenAt = new Map<string, number>();
+  private ghostHitSendTimes: number[] = [];
+  private static readonly GHOST_HIT_DEDUP_MS = 2500;
+  private static readonly GHOST_HIT_MAX_PER_SEC = 3;
 
   private getConfigsDir(): string {
     return join(getRealmengineDocumentsDir(), 'configs');
@@ -3952,11 +3957,27 @@ export class DevServer {
       const ownerId  = Number(action.slice(0, colon));
       const bulletId = Number(action.slice(colon + 1));
       if (!Number.isFinite(ownerId) || !Number.isFinite(bulletId)) return;
+
+      const now = Date.now();
+      const dedupKey = `${ownerId}:${bulletId & 0xffff}`;
+      const lastSeen = this.ghostHitSeenAt.get(dedupKey) ?? 0;
+      if (now - lastSeen < DevServer.GHOST_HIT_DEDUP_MS) return;
+
+      const cutoff = now - 1000;
+      let expired = 0;
+      while (expired < this.ghostHitSendTimes.length && this.ghostHitSendTimes[expired] <= cutoff) {
+        expired++;
+      }
+      if (expired > 0) this.ghostHitSendTimes.splice(0, expired);
+      if (this.ghostHitSendTimes.length >= DevServer.GHOST_HIT_MAX_PER_SEC) return;
+
       const packet = this.proxy.packetFactory.createByName('PLAYERHIT');
       if (!packet) return;
       packet.data = { bulletId, objectId: ownerId };
       packet.modified = true;
       this.currentClient.sendToServer(packet);
+      this.ghostHitSeenAt.set(dedupKey, now);
+      this.ghostHitSendTimes.push(now);
     } catch (err) {
       Logger.warn('DevServer', `ghostHit dispatch failed: ${(err as Error).message}`);
     }
