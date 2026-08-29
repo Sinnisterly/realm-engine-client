@@ -428,7 +428,7 @@ export class DevServer {
   private ghostHitSeenAt = new Map<string, number>();
   private ghostHitSendTimes: number[] = [];
   private static readonly GHOST_HIT_DEDUP_MS = 2500;
-  private static readonly GHOST_HIT_MAX_PER_SEC = 3;
+  private static readonly GHOST_HIT_MAX_PER_SEC = 16;
 
   private getConfigsDir(): string {
     return join(getRealmengineDocumentsDir(), 'configs');

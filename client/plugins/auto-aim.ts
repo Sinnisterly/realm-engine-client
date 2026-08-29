@@ -63,8 +63,8 @@ export function register(ctx: PluginContext) {
   });
 
   // Walls and breakable trees are tagged as enemies and do carry a health bar,
-  // so 'ignoreWalls' (a noHealthBar test) never catches them. This one keys off
-  // the object being static and having no projectiles of its own.
+  // so 'ignoreWalls' (a noHealthBar test) never catches them. This keys off
+  // occupy/enemyOccupy square plus no projectiles (DLL EnemyTracker parity).
   ctx.registerSetting('ignoreScenery', {
     label: 'Ignore walls / breakables',
     type: 'boolean',

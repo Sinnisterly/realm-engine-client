@@ -94,6 +94,8 @@ interface NexusState {
   escapeRetry:  ReturnType<typeof setInterval> | null;
   /** How many ESCAPEs have gone out for the current escape attempt. */
   escapeCount:  number;
+  /** Timestamps of ESCAPE sends in the last second (align with OutboundPacketGuard). */
+  recentEscapeSends: number[];
 }
 
 interface UnattributedSample {
@@ -307,6 +309,7 @@ export function register(ctx: PluginContext) {
         predicted: [], predictedRecovery: 0, heldTimers: [],
         unattributed: [],
         escapeRetry: null, escapeCount: 0,
+        recentEscapeSends: [],
       };
       states.set(client, s);
     }
@@ -534,9 +537,19 @@ export function register(ctx: PluginContext) {
   }
 
   function sendEscape(client: ClientConnection, state: NexusState): void {
+    const now = Date.now();
+    const cutoff = now - 1000;
+    let expired = 0;
+    while (expired < state.recentEscapeSends.length
+      && state.recentEscapeSends[expired] <= cutoff) expired++;
+    if (expired > 0) state.recentEscapeSends.splice(0, expired);
+    // Match OutboundPacketGuard ESCAPE limit (4/sec) so retries don't spam disconnects.
+    if (state.recentEscapeSends.length >= 4) return;
+
     const escape = ctx.createPacket('ESCAPE');
     escape.modified = true;
     client.sendToServer(escape);
+    state.recentEscapeSends.push(now);
     state.escapeCount++;
   }
 
@@ -699,6 +712,7 @@ export function register(ctx: PluginContext) {
     state.inSafeZone = SAFE_ZONE_MAPS.has(mapName);
     state.nexusSent  = false;
     state.escapeCount = 0;
+    state.recentEscapeSends = [];
     disarmEscapeRetry(state);
     state.serverHp   = 0;
     state.pendingHeal = 0;

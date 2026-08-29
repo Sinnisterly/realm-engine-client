@@ -22,9 +22,13 @@ static const uint32_t& kOffObjProps      = RuntimeOffsets::ObjProps;
 static const uint32_t& kOffOpIsEnemy     = RuntimeOffsets::OP_IsEnemy;
 static const uint32_t& kOffOpNoHealthBar = RuntimeOffsets::OP_NoHealthBar;
 static const uint32_t& kOffOpInvincElem  = RuntimeOffsets::OP_InvincibleElem;
+static const uint32_t& kOffOpOccupySq    = RuntimeOffsets::OP_OccupySq;
+static const uint32_t& kOffOpEnemyOcc    = RuntimeOffsets::OP_EnemyOcc;
+static const uint32_t& kOffOpFullOcc     = RuntimeOffsets::OP_FullOcc;
 static const uint32_t& kOffOpIsStatic    = RuntimeOffsets::OP_IsStatic;
 static const uint32_t& kOffOpHasProj     = RuntimeOffsets::OP_HasProj;
 static const uint32_t& kOffOpNumProj     = RuntimeOffsets::OP_NumProj;
+static const uint32_t& kOffOpProjectiles = RuntimeOffsets::OP_Projectiles;
 static const uint32_t& kOffObjType       = RuntimeOffsets::ObjType;
 static const uint32_t& kOffWmDict        = RuntimeOffsets::WM_AllDict;
 
@@ -53,6 +57,38 @@ static bool IsWhitelistedType(int32_t t) {
 static inline bool AddrOk(const void* p) {
     const uintptr_t a = reinterpret_cast<uintptr_t>(p);
     return a > 0x10000 && a < 0x7FFFFFFFFFFFULL;
+}
+
+// Mirrors client GameWorldState.isScenery: blocks movement and never shoots.
+// Breakable walls use EnemyOccupySquare (not always isStatic), so we cannot rely
+// on isStatic alone.
+static bool ObjectTypeCanShoot(uint8_t* op)
+{
+    if (kOffOpHasProj != 0 && *reinterpret_cast<uint8_t*>(op + kOffOpHasProj) != 0)
+        return true;
+    if (kOffOpNumProj != 0 && *reinterpret_cast<int32_t*>(op + kOffOpNumProj) > 0)
+        return true;
+    if (kOffOpProjectiles != 0) {
+        void* arr = *reinterpret_cast<void**>(op + kOffOpProjectiles);
+        if (AddrOk(arr)) {
+            __try {
+                const uint32_t len = il2cpp_array_length(reinterpret_cast<Il2CppArray*>(arr));
+                if (len > 0) return true;
+            } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+    }
+    return false;
+}
+
+static bool ObjectTypeOccupiesMovement(uint8_t* op)
+{
+    if (kOffOpOccupySq != 0 && *reinterpret_cast<uint8_t*>(op + kOffOpOccupySq) != 0)
+        return true;
+    if (kOffOpEnemyOcc != 0 && *reinterpret_cast<uint8_t*>(op + kOffOpEnemyOcc) != 0)
+        return true;
+    if (kOffOpFullOcc != 0 && *reinterpret_cast<uint8_t*>(op + kOffOpFullOcc) != 0)
+        return true;
+    return false;
 }
 
 // ── Velocity tracking ────────────────────────────────────────────────────────
@@ -179,16 +215,13 @@ static bool SehReadCandidate(uint8_t* entry, void* local, uint64_t localKlass, C
         const uint8_t noHB = *reinterpret_cast<uint8_t*>(op + kOffOpNoHealthBar);
 
         // Breakable scenery reads as an enemy and carries a health bar, so the
-        // noHealthBar test alone lets walls and trees through. What actually
-        // separates them from a mob is that they never move and never shoot.
-        bool scenery = false;
-        if (kOffOpIsStatic != 0 && *reinterpret_cast<uint8_t*>(op + kOffOpIsStatic)) {
-            const bool hasProj = kOffOpHasProj != 0
-                && *reinterpret_cast<uint8_t*>(op + kOffOpHasProj) != 0;
-            const bool numProj = kOffOpNumProj != 0
-                && *reinterpret_cast<int32_t*>(op + kOffOpNumProj) > 0;
-            scenery = !hasProj && !numProj;
-        }
+        // noHealthBar test alone lets walls and trees through. What separates
+        // them from a mob is that they block a square and never shoot.
+        const bool canShoot = ObjectTypeCanShoot(op);
+        bool scenery = ObjectTypeOccupiesMovement(op) && !canShoot;
+        if (!scenery && kOffOpIsStatic != 0
+            && *reinterpret_cast<uint8_t*>(op + kOffOpIsStatic) != 0 && !canShoot)
+            scenery = true;
 
         // XML <Invincible/> — reject if InvincibleElement pointer exists (regardless of string)
         void* invPtr = *reinterpret_cast<void**>(op + kOffOpInvincElem);

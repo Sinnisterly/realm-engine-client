@@ -1,4 +1,5 @@
 import type { PluginContext } from '../src/plugins/PluginContext.js';
+import type { ClientConnection } from '../src/proxy/ClientConnection.js';
 import { sendDllFeature } from '../src/bridge/DllFeatureBus.js';
 
 export function register(ctx: PluginContext) {
@@ -7,6 +8,9 @@ export function register(ctx: PluginContext) {
 
   let aoeackSpoof = false;
   let playerhitRedirect = false;
+
+  const otherHitTimes = new WeakMap<ClientConnection, number[]>();
+  const MAX_OTHERHIT_PER_SEC = 4;
 
   ctx.registerSetting('aoeackSpoof', {
     label: 'AOEACK Position Spoof',
@@ -92,6 +96,16 @@ export function register(ctx: PluginContext) {
     }
 
     if (targetId === null) return;
+
+    const now = Date.now();
+    let times = otherHitTimes.get(client) ?? [];
+    const cutoff = now - 1000;
+    let expired = 0;
+    while (expired < times.length && times[expired] <= cutoff) expired++;
+    if (expired > 0) times = times.slice(expired);
+    if (times.length >= MAX_OTHERHIT_PER_SEC) return;
+    times.push(now);
+    otherHitTimes.set(client, times);
 
     // Block the original hit on us
     packet.send = false;

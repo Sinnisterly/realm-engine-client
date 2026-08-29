@@ -152,7 +152,7 @@ float s_lastDeltaTime = 0.016f;
 static LARGE_INTEGER s_wallFreq = []{ LARGE_INTEGER f{}; QueryPerformanceFrequency(&f); return f; }();
 static LARGE_INTEGER s_lastMoveWallTick{};
 static LARGE_INTEGER s_lastNativeMoveWall{};
-static std::atomic<float> s_nativeMoveMinIntervalMs{ 100.f };
+static std::atomic<float> s_nativeMoveMinIntervalMs{ 40.f };
 
 float GetDeltaTime()
 {
@@ -1081,6 +1081,7 @@ bool NativeMoveTo(void* player, float worldX, float worldY)
 
     // Cap MOVE emit rate. Reflex dodge can call this every render frame (~60 Hz)
     // but the server expects roughly one authoritative step per tick (~200 ms).
+    // 40ms (~25/sec) — loosened for dodge feel; still below render-frame flood (~60 Hz).
     LARGE_INTEGER now{};
     QueryPerformanceCounter(&now);
     if (s_lastNativeMoveWall.QuadPart != 0 && s_wallFreq.QuadPart != 0) {

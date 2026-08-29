@@ -9,17 +9,19 @@ import { Logger } from '../util/Logger.js';
 
 /** Max synthetic packets per second by packet name. */
 const PER_TYPE_LIMITS: Record<string, number> = {
-  PLAYERHIT: 3,
+  PLAYERHIT: 16,
+  OTHERHIT: 4,
   USEITEM: 12,
   INVENTORYSWAP: 6,
   ESCAPE: 4,
   INVDROP: 8,
   GOTOACK: 6,
   TELEPORT: 4,
+  HELLO: 2,
 };
 
 /** Hard ceiling on all synthetic outbound packets combined. */
-const TOTAL_SYNTHETIC_PER_SEC = 24;
+const TOTAL_SYNTHETIC_PER_SEC = 64;
 
 export class OutboundPacketGuard {
   private readonly perType = new Map<string, PacketBudget>();
