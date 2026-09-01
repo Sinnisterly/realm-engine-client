@@ -21,7 +21,8 @@ struct Ctx {
     const Snapshot*  sn = nullptr;
     float speed = 0.f;     // tiles/ms
     float lead = 0.f;      // ms
-    float horizon = 0.f;   // ms
+    float horizon = 0.f;   // ms (projectiles)
+    float aoeHorizon = 0.f;// ms (telegraphed blasts — longer fuses)
     float hitScale = 1.f;  // multiplier on each projectile's hit threshold
     bool  hazardEscape = false;           // standing on damaging ground (safeWalk on)
     Vec2  dirs[kCandidateCount]{};
@@ -132,6 +133,25 @@ void ValidateCandidatePaths(Ctx& c)
 {
     c.enemyClear[kStandCandidate] = EnemyClearanceAt(c, c.in->player);
     for (int cand = 1; cand < kCandidateCount; ++cand) {
+        // PlayerAt() offsets by the command lead, so a loop starting at t=0
+        // first samples `speed * lead` tiles out — roughly a third of a tile at
+        // walk speed, and more with speed gear. A wall inside that gap was
+        // never tested, and the move we actually issue lands in it. Start one
+        // step past the player's own square instead (never AT it: a stale tile
+        // map that wrongly marks the player's square blocked would otherwise
+        // invalidate every candidate and freeze the dodge).
+        bool nearBlocked = false;
+        for (float u = kSampleMs; u < c.lead; u += kSampleMs) {
+            const Vec2 p = Add(c.in->player, Mul(c.dirs[cand], c.speed * u));
+            if (CanOccupy(c, p.x, p.y)) continue;
+            c.blockMs[cand] = 0.f;
+            c.impactMs[cand] = 0.f;
+            c.valid[cand] = false;
+            nearBlocked = true;
+            break;
+        }
+        if (nearBlocked) continue;
+
         for (float t = 0.f; t <= c.horizon; t += kSampleMs) {
             const Vec2 p = PlayerAt(c, c.dirs[cand], t);
             c.enemyClear[cand] = std::min(c.enemyClear[cand], EnemyClearanceAt(c, p));
@@ -245,7 +265,7 @@ void ScoreAoes(Ctx& c, float& earliestImpactMs, int& threatCount)
     for (int i = 0; i < c.sn->aoeCount; ++i) {
         const AoeThreat& a = c.sn->aoes[i];
         const float landing = a.landingMs;
-        if (landing <= 0.f || landing > c.horizon) continue;
+        if (landing <= 0.f || landing > c.aoeHorizon) continue;
         const float centerDist = Len(Sub(a.pos, c.in->player));
         if (centerDist > a.radius + c.speed * (c.lead + landing) + kRelevanceClearance) continue;
 
@@ -479,7 +499,7 @@ bool IsVelocitySafe(const Ctx& c, Vec2 vel)
     }
     for (int i = 0; i < c.sn->aoeCount; ++i) {
         const AoeThreat& a = c.sn->aoes[i];
-        if (a.landingMs <= 0.f || a.landingMs > c.horizon) continue;
+        if (a.landingMs <= 0.f || a.landingMs > c.aoeHorizon) continue;
         const Vec2 p = Add(c.in->player, Mul(vel, c.lead + a.landingMs));
         if (Len(Sub(a.pos, p)) - a.radius < kIntentSafeClearance) return false;
     }
@@ -563,6 +583,7 @@ void Evaluate(const CoreInput& in, CoreState& state, CoreOutput& out)
     c.speed = std::max(0.f, in.moveSpeed);
     c.lead = std::clamp(in.settings.leadMs, 0.f, 250.f);
     c.horizon = std::clamp(in.settings.horizonMs, 200.f, 2000.f);
+    c.aoeHorizon = std::max(c.horizon, std::clamp(in.settings.aoeHorizonMs, 200.f, 5000.f));
     c.hitScale = std::clamp(in.settings.hitScale, 0.25f, 2.5f);
 
     for (int i = 0; i < kDirectionCount; ++i) {

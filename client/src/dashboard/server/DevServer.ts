@@ -3978,6 +3978,14 @@ export class DevServer {
       this.currentClient.sendToServer(packet);
       this.ghostHitSeenAt.set(dedupKey, now);
       this.ghostHitSendTimes.push(now);
+      // The dedup map is keyed per bullet, so it grows for the whole session
+      // unless entries past the dedup window are dropped.
+      if (this.ghostHitSeenAt.size > 4096) {
+        const stale = now - DevServer.GHOST_HIT_DEDUP_MS;
+        for (const [key, seenAt] of this.ghostHitSeenAt) {
+          if (seenAt <= stale) this.ghostHitSeenAt.delete(key);
+        }
+      }
     } catch (err) {
       Logger.warn('DevServer', `ghostHit dispatch failed: ${(err as Error).message}`);
     }

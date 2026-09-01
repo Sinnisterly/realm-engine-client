@@ -53,6 +53,7 @@ import type { BridgeClientRef } from './scripts/bridge/BridgeDeps.js';
 import { GameWorldState } from './state/GameWorldState.js';
 import { ProjectileTracker } from './state/ProjectileTracker.js';
 import { GameDataLoader } from './game-data/GameDataLoader.js';
+import { getRealmengineDataDir } from './util/rotmgAssetExtractor.js';
 import { PluginManager } from './plugins/PluginManager.js';
 import { PacketInspector } from './dashboard/server/PacketInspector.js';
 import { DevServer } from './dashboard/server/DevServer.js';
@@ -318,18 +319,47 @@ async function main() {
   const dataDir = resolve(ROOT, 'data');
 
   // 3. Load game data (objects.xml for projectile definitions, tiles.xml for tile damage)
-  const objectsPath = resolve(ROOT, 'data', 'objects.xml');
-  const tilesPath = resolve(ROOT, 'data', 'tiles.xml');
+  //
+  // These are gitignored 30 MB extracts, so ROOT/data is empty on a fresh clone
+  // and in any package built without them — the app then runs with zero object
+  // definitions, which silently disables everything that classifies an object:
+  // no enemy is ever "Enemy", so auto-ability and auto-loot find nothing, and
+  // every tile reads as walkable. `extractGameXmls` writes to
+  // Documents/Realmengine/data (that is where `npm run download-game-xml` puts
+  // them), which was never one of the places we looked. Try both.
+  const gameXmlDirs = [resolve(ROOT, 'data'), getRealmengineDataDir()];
+  const findGameXml = (name: string): string | null => {
+    for (const dir of gameXmlDirs) {
+      const candidate = resolve(dir, name);
+      if (existsSync(candidate)) return candidate;
+    }
+    return null;
+  };
+
+  const objectsPath = findGameXml('objects.xml');
+  const tilesPath = findGameXml('tiles.xml');
   const gameData = new GameDataLoader();
-  try {
-    gameData.load(objectsPath);
-  } catch (err) {
-    Logger.warn('Main', `Failed to load objects.xml: ${(err as Error).message}`);
+  const missingHint = 'run: npm run download-game-xml';
+  if (!objectsPath) {
+    Logger.warn('Main', `objects.xml not found in ${gameXmlDirs.join(' or ')} — `
+      + `object classification is disabled (no enemies, no loot rules). ${missingHint}`);
+  } else {
+    try {
+      gameData.load(objectsPath);
+      Logger.log('Main', `Game objects loaded from ${objectsPath}`);
+    } catch (err) {
+      Logger.warn('Main', `Failed to load objects.xml: ${(err as Error).message}`);
+    }
   }
-  try {
-    gameData.loadTiles(tilesPath);
-  } catch (err) {
-    Logger.warn('Main', `Failed to load tiles.xml: ${(err as Error).message} (run: npm run download-game-xml -- --dir ./data)`);
+  if (!tilesPath) {
+    Logger.warn('Main', `tiles.xml not found in ${gameXmlDirs.join(' or ')} — `
+      + `tile damage and walkability are unavailable. ${missingHint}`);
+  } else {
+    try {
+      gameData.loadTiles(tilesPath);
+    } catch (err) {
+      Logger.warn('Main', `Failed to load tiles.xml: ${(err as Error).message} (${missingHint})`);
+    }
   }
 
   // 4. Attach core handlers (built-in, not plugins)

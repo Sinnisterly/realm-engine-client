@@ -225,12 +225,18 @@ namespace {
         static const FeatureHandler h[] = {
             FH_FLOAT("pjdodgeHorizonMs", PJDodge::SetHorizonMs),
             FH_FLOAT("pjdodgeLeadMs", PJDodge::SetLeadMs),
+            FH_FLOAT("pjdodgeAoeHorizonMs", PJDodge::SetAoeHorizonMs),
             FH_FLOAT("pjdodgeHitScale", PJDodge::SetHitScale),
             FH_INT_BOOL("pjdodgeSafeWalk", PJDodge::SetSafeWalk),
             FH_INT_BOOL("pjdodgeSpeedScale", PJDodge::SetSpeedScale),
             FH_INT_BOOL("pjdodgePredictionAccuracy", PJDodge::SetPredictionAccuracy),
             FH_INT_BOOL("pjdodgeDebugOverlay", PJDodge::SetDebugOverlay),
-            FH_INT_BOOL("pjdodgeLockFollow", PJDodge::SetLockFollow)
+            FH_INT_BOOL("pjdodgeLockFollow", PJDodge::SetLockFollow),
+            FH_INT_BOOL("pjdodgeManualPriority", PJDodge::SetManualPriority),
+            FH_FLOAT("pjdodgeManualHoldMs", PJDodge::SetManualHoldMs),
+            FH_INT_BOOL("pjdodgeHumanize", PJDodge::SetHumanize),
+            FH_FLOAT("pjdodgeReactionMs", PJDodge::SetReactionMs),
+            FH_FLOAT("pjdodgeTurnRateDeg", PJDodge::SetTurnRateDeg)
         };
         return ApplyFeatureTable(f, h, sizeof(h) / sizeof(h[0]));
     }

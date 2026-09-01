@@ -214,6 +214,7 @@ void Build(Snapshot& out, float playerX, float playerY, const Settings& settings
 
     const float cullSq = kThreatCullTiles * kThreatCullTiles;
     const float windowMs = std::clamp(settings.horizonMs, 200.f, 2000.f) + kPathPadMs;
+    const float aoeWindowMs = std::clamp(settings.aoeHorizonMs, 200.f, 5000.f);
     const uint64_t nowMs = GetTickCount64();
     const int32_t localId = ProjectileTracking::GetLocalPlayerObjectId();
 
@@ -294,7 +295,7 @@ void Build(Snapshot& out, float playerX, float playerY, const Settings& settings
         const float landAtMs = (IsFinite(a.arcMs) && a.arcMs > 0.f) ? a.arcMs
                              : (IsFinite(a.lifetime) && a.lifetime > 0.f ? a.lifetime : 2000.f);
         const float landingMs = landAtMs - elapsedMs;
-        if (landingMs <= 0.f || landingMs > windowMs) continue;
+        if (landingMs <= 0.f || landingMs > aoeWindowMs) continue;
 
         const float radius = (IsFinite(a.radius) && a.radius > 0.f) ? std::clamp(a.radius, 0.2f, 12.f) : 1.5f;
         const float cull = kAoeCullPad + radius;

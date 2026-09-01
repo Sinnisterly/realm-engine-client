@@ -35,14 +35,21 @@ export class OutboundPacketGuard {
     const typeBudget = this.budgetFor(name);
     const now = Date.now();
 
-    if (!this.total.tryConsume(now)) {
-      this.logDrop(name, 'total budget');
-      return false;
-    }
-    if (!typeBudget.tryConsume(now)) {
+    // Check both budgets before consuming either. Consuming the total first
+    // spent a slot on every packet the per-type limit then rejected, so a
+    // plugin hammering one packet type drained the shared ceiling and starved
+    // every other plugin's sends.
+    if (typeBudget.remaining(now) <= 0) {
       this.logDrop(name, 'per-type budget');
       return false;
     }
+    if (this.total.remaining(now) <= 0) {
+      this.logDrop(name, 'total budget');
+      return false;
+    }
+
+    typeBudget.tryConsume(now);
+    this.total.tryConsume(now);
     return true;
   }
 

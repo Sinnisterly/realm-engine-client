@@ -106,7 +106,12 @@ struct Snapshot {
 };
 
 struct Settings {
-    float horizonMs   = 600.f;   // prediction window
+    float horizonMs   = 600.f;   // prediction window (projectiles)
+    // Telegraphed blasts run on fuses of 1.5-3 s, so the projectile horizon is
+    // far too short for them: at 600 ms a nova only becomes visible once you
+    // are already inside it with barely enough time to clear the radius. AoEs
+    // cost one point-test per candidate, so a long window is nearly free.
+    float aoeHorizonMs = 2500.f;
     float leadMs      = 40.f;    // command latency: plan for where we'll be, not where we are
     float hitScale    = 1.0f;    // multiplier on each projectile's real hit threshold T
     bool  safeWalk    = true;    // avoid damaging ground when validating paths

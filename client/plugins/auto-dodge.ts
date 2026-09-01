@@ -259,6 +259,28 @@ export function register(ctx: PluginContext) {
     label: '[PJDodge] Hit scale (1 = exact game hitbox)', advanced: true,
     type: 'range', value: 1, min: 0.5, max: 1.5, step: 0.05,
   }, (v: number) => sendDllFeature('pjdodgeHitScale', v));
+  registerModeSetting('pj-dodge', 'pjdodgeAoeHorizonMs', {
+    label: '[PJDodge] AoE horizon (ms — telegraph fuses)',
+    type: 'range', value: 2500, min: 500, max: 5000, step: 100,
+  }, (v: number) => sendDllFeature('pjdodgeAoeHorizonMs', v));
+  registerModeSetting('pj-dodge', 'pjdodgeManualPriority',
+    onOff('[PJDodge] WASD takes priority over the dodge', 'on'),
+    (v: string) => sendDllFeature('pjdodgeManualPriority', v === 'on' ? 1 : 0));
+  registerModeSetting('pj-dodge', 'pjdodgeManualHoldMs', {
+    label: '[PJDodge] Manual hold after last keypress (ms)',
+    type: 'range', value: 350, min: 0, max: 1000, step: 25,
+  }, (v: number) => sendDllFeature('pjdodgeManualHoldMs', v));
+  registerModeSetting('pj-dodge', 'pjdodgeHumanize',
+    onOff('[PJDodge] Humanize movement (reaction + turn rate)', 'on'),
+    (v: string) => sendDllFeature('pjdodgeHumanize', v === 'on' ? 1 : 0));
+  registerModeSetting('pj-dodge', 'pjdodgeReactionMs', {
+    label: '[PJDodge] Reaction delay (ms — 0 is instant/robotic)',
+    type: 'range', value: 70, min: 0, max: 200, step: 5,
+  }, (v: number) => sendDllFeature('pjdodgeReactionMs', v));
+  registerModeSetting('pj-dodge', 'pjdodgeTurnRateDeg', {
+    label: '[PJDodge] Turn rate (deg/sec)', advanced: true,
+    type: 'range', value: 900, min: 180, max: 2400, step: 30,
+  }, (v: number) => sendDllFeature('pjdodgeTurnRateDeg', v));
   registerModeSetting('pj-dodge', 'pjdodgeSafeWalk', onOff('[PJDodge] Safe walk (avoid damaging ground)', 'on'),
     (v: string) => sendDllFeature('pjdodgeSafeWalk', v === 'on' ? 1 : 0));
   registerModeSetting('pj-dodge', 'pjdodgeSpeedScale', onOff('[PJDodge] Match intent speed on gentle overrides', 'on'),
@@ -428,7 +450,13 @@ export function register(ctx: PluginContext) {
     sendDllFeature('pjdodgeHorizonMs', ctx.getSetting<number>('pjdodgeHorizonMs'));
     sendDllFeature('pjdodgeLeadMs', ctx.getSetting<number>('pjdodgeLeadMs'));
     sendDllFeature('pjdodgeHitScale', ctx.getSetting<number>('pjdodgeHitScale'));
-    for (const k of ['pjdodgeSafeWalk', 'pjdodgeSpeedScale', 'pjdodgePredictionAccuracy', 'pjdodgeDebugOverlay', 'pjdodgeLockFollow'])
+    sendDllFeature('pjdodgeAoeHorizonMs', ctx.getSetting<number>('pjdodgeAoeHorizonMs'));
+    sendDllFeature('pjdodgeManualHoldMs', ctx.getSetting<number>('pjdodgeManualHoldMs'));
+    sendDllFeature('pjdodgeReactionMs', ctx.getSetting<number>('pjdodgeReactionMs'));
+    sendDllFeature('pjdodgeTurnRateDeg', ctx.getSetting<number>('pjdodgeTurnRateDeg'));
+    for (const k of ['pjdodgeSafeWalk', 'pjdodgeSpeedScale', 'pjdodgePredictionAccuracy',
+                     'pjdodgeDebugOverlay', 'pjdodgeLockFollow', 'pjdodgeManualPriority',
+                     'pjdodgeHumanize'])
       sendDllFeature(k, ctx.getSetting<string>(k) === 'on' ? 1 : 0);
     // Re-apply the 60fps cap here too. The onEnabledChange / clientConnected
     // handlers were the only places setting targetFrameRate, so if the cap

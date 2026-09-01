@@ -204,6 +204,36 @@ if (resolve(dllBuilt) !== resolve(DLL_DEST)) {
   log(`DLL already in assets/version.dll (${fileSize(DLL_DEST)})`);
 }
 
+// ── Step 4b: Stage game XML into data/ so the package ships with it ─────────
+
+// electron-builder copies client/data → resources/data, but objects.xml and
+// tiles.xml are gitignored 30 MB extracts that only exist where
+// `npm run download-game-xml` put them (Documents/Realmengine/data). Without
+// this, every packaged build ran with zero object definitions: nothing was ever
+// classified as an enemy, so auto-ability and auto-loot silently found nothing,
+// and every tile read as walkable. Stage them at package time instead.
+{
+  const docsDataDir = join(
+    process.env.USERPROFILE || process.env.HOME || '',
+    'Documents', 'Realmengine', 'data',
+  );
+  for (const name of ['objects.xml', 'tiles.xml']) {
+    const dest = join(DATA_DIR, name);
+    const src = join(docsDataDir, name);
+    if (existsSync(dest)) {
+      log(`Game data: data/${name} present (${fileSize(dest)})`);
+      continue;
+    }
+    if (existsSync(src)) {
+      copyFileSync(src, dest);
+      log(`Game data: staged ${name} from Documents/Realmengine/data (${fileSize(dest)})`);
+    } else {
+      log(`WARNING: ${name} not found in data/ or ${docsDataDir}.`);
+      log(`         The build will ship without it — run "npm run download-game-xml" first.`);
+    }
+  }
+}
+
 // ── Step 5: Bundle core ──────────────────────────────────────────────────────
 
 log('Bundling core application...');

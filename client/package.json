@@ -1,6 +1,6 @@
 {
   "name": "realm-engine",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Realm Engine - RotMG Exalt MITM proxy and automation dashboard",
   "type": "module",
   "main": "electron/main.cjs",

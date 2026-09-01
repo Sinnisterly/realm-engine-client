@@ -51,6 +51,8 @@ DiagView GetDiagView();
 // Knobs (atomic; IPC + GUI).
 void  SetHorizonMs(float ms);   float GetHorizonMs();
 void  SetLeadMs(float ms);      float GetLeadMs();
+// Telegraphed blasts get their own, much longer window than projectiles.
+void  SetAoeHorizonMs(float ms); float GetAoeHorizonMs();
 void  SetHitScale(float s);     float GetHitScale();
 void  SetSafeWalk(bool en);     bool  GetSafeWalk();
 void  SetSpeedScale(bool en);   bool  GetSpeedScale();
@@ -60,5 +62,15 @@ void  SetDebugOverlay(bool en); bool  GetDebugOverlay();
 // as the intent direction when no WASD input is active. The character walks
 // toward the lock target while dodging; WASD always overrides.
 void  SetLockFollow(bool en);   bool  GetLockFollow();
+
+// Player authority: while WASD is held (and for ManualHoldMs after the last
+// press) the controller stands down for anything short of an imminent hit.
+void  SetManualPriority(bool en); bool  GetManualPriority();
+void  SetManualHoldMs(float ms);  float GetManualHoldMs();
+// Humanization: a reaction delay before non-urgent dodges start, and a cap on
+// how fast the heading may rotate. Emergency saves bypass both.
+void  SetHumanize(bool en);       bool  GetHumanize();
+void  SetReactionMs(float ms);    float GetReactionMs();
+void  SetTurnRateDeg(float deg);  float GetTurnRateDeg();
 
 } // namespace PJDodge
