@@ -1,0 +1,72 @@
+[
+  {
+    "feature": "Proxy load",
+    "library": "forward exports",
+    "target": "System32\\version.dll (17 exports)",
+    "detour": "WRAPPER_GENFUNC stubs",
+    "evidence": "PE exports match version.def; string \\version.dll"
+  },
+  {
+    "feature": "Render / game tick",
+    "library": "MS Detours",
+    "target": "IDXGISwapChain::Present (inferred from .detourc section)",
+    "detour": "unknown (no ImGui strings)",
+    "evidence": ".detourc/.detourd sections; no ImGui in strings"
+  },
+  {
+    "feature": "Auto aim",
+    "library": "Detours or inline hook (no MinHook strings)",
+    "target": "playerClass::shooting + ComputeShootAngle equivalent",
+    "detour": "AutoAim* settings read from MultiTool.exe",
+    "evidence": "AutoAimEnabled, AutoAimMode, AutoAimFocusBoss, ..."
+  },
+  {
+    "feature": "Projectile noclip",
+    "library": "Detours (inferred)",
+    "target": "GJFKGLJEGKO + IACODGNOFMH equivalent",
+    "detour": "WeaponModsProjectileNoclip",
+    "evidence": "WeaponModsProjectileNoclip string; BN sub_180007380/400 match in ProjNoclip.cpp"
+  },
+  {
+    "feature": "Speedhack bypass",
+    "library": "IL2CPP method hook",
+    "target": "CodeStage.AntiCheat.Detectors.SpeedHackDetector::Update",
+    "detour": "skip or no-op Update",
+    "evidence": "SpeedHackDetector, Failed to find SpeedHackDetector.Update"
+  },
+  {
+    "feature": "Obscured cheating bypass",
+    "library": "IL2CPP method hook",
+    "target": "CodeStage.AntiCheat.Detectors.ObscuredCheatingDetector::OnCheatingDetected",
+    "detour": "suppress cheating callback",
+    "evidence": "ObscuredCheatingDetector, OnCheatingDetected strings"
+  },
+  {
+    "feature": "SlowWalk",
+    "library": "unknown",
+    "target": "playerClass::speed or move input",
+    "detour": "SlowWalkHold/SlowWalkKey scaling",
+    "evidence": "SlowWalk* strings"
+  },
+  {
+    "feature": "FPS control",
+    "library": "IL2CPP invoke",
+    "target": "QualitySettings.set_targetFrameRate / set_vSyncCount",
+    "detour": "FpsBackground/FpsForeground/FpsVsync",
+    "evidence": "FpsBackground, set_targetFrameRate, set_vSyncCount"
+  },
+  {
+    "feature": "Settings IPC",
+    "library": "Win32 registry + HTTP",
+    "target": "SOFTWARE\\RealmStock\\MultiTool",
+    "detour": "poll RegNotifyChangeKeyValue; HTTP ReadAsStringAsync",
+    "evidence": "registry API strings; System.Net.Http; MultiTool not running error"
+  },
+  {
+    "feature": "IL2CPP init",
+    "library": "dynamic GetProcAddress",
+    "target": "GameAssembly.dll exports",
+    "detour": "N/A",
+    "evidence": "il2cpp_init, il2cpp_class_from_name, GameAssembly.dll"
+  }
+]

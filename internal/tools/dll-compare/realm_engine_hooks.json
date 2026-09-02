@@ -1,0 +1,86 @@
+[
+  {
+    "feature": "Render loop",
+    "library": "MS Detours",
+    "target": "IDXGISwapChain::Present (vtable[8])",
+    "detour": "DirectX::dPresent",
+    "source": "internal/src/platform/hooks/InitHooks.cpp"
+  },
+  {
+    "feature": "Auto aim",
+    "library": "MinHook",
+    "target": "LKHPPBEGNOM::ELCBJAFBLJG (ComputeShootAngle)",
+    "detour": "ComputeShootAngleDetour",
+    "source": "internal/src/features/combat/autoaim/AimHooks.cpp"
+  },
+  {
+    "feature": "Auto aim",
+    "library": "MinHook",
+    "target": "FKALGHJIADI::EHGHCACPAGH (ShootWithAngle)",
+    "detour": "ShootWithAngleDetour",
+    "source": "internal/src/features/combat/autoaim/AimHooks.cpp"
+  },
+  {
+    "feature": "Auto aim",
+    "library": "MinHook",
+    "target": "FKALGHJIADI::PMIANFBMMNN (SendShotPacket)",
+    "detour": "SendShotPacketDetour",
+    "source": "internal/src/features/combat/autoaim/AimHooks.cpp"
+  },
+  {
+    "feature": "Projectile noclip",
+    "library": "MinHook",
+    "target": "GJFKGLJEGKO + IACODGNOFMH (matches MultiTool sub_180007380/sub_180007400)",
+    "detour": "ProjNoclip detours",
+    "source": "internal/src/features/combat/autoaim/ProjNoclip.cpp"
+  },
+  {
+    "feature": "Speedhack",
+    "library": "MS Detours + MinHook",
+    "target": "Unity Time icalls + SpeedHackProofTime::Update + SpeedHackDetector::Update",
+    "detour": "SpeedHack detours",
+    "source": "internal/src/features/movement/speedhack/SpeedHack.cpp"
+  },
+  {
+    "feature": "Player noclip",
+    "library": "MinHook",
+    "target": "HJMBOMEHGDJ Map walkability predicates (7 methods)",
+    "detour": "NoclipHook detours",
+    "source": "internal/src/features/movement/noclip/NoclipHook.cpp"
+  },
+  {
+    "feature": "XDodge",
+    "library": "MinHook",
+    "target": "AppEngineManager::Update",
+    "detour": "Detour_AppEngineUpdate",
+    "source": "internal/src/features/movement/dodge/DangerPlanner.cpp"
+  },
+  {
+    "feature": "Projectile tracking",
+    "library": "MinHook",
+    "target": "HBEAKBIHANL spawn method",
+    "detour": "Projectile spawn detour",
+    "source": "internal/src/features/movement/dodge/ProjectileTracking.cpp"
+  },
+  {
+    "feature": "AoE tracking",
+    "library": "MinHook",
+    "target": "ShowEffect + GJJCEFJMNMK + FHOHCELBPDO + explosion spawn paths",
+    "detour": "AoeTracking detours",
+    "source": "internal/src/features/movement/dodge/AoeTracking.cpp"
+  },
+  {
+    "feature": "Credentials",
+    "library": "MinHook",
+    "target": "Connect + SetSteamId (network auth)",
+    "detour": "CredentialCapture detours",
+    "source": "internal/src/features/account/CredentialCapture.cpp"
+  },
+  {
+    "feature": "Char select",
+    "library": "MinHook",
+    "target": "Char select UI ctor/hide",
+    "detour": "CharSelect detours",
+    "source": "internal/src/features/account/CharSelect.cpp"
+  }
+]
